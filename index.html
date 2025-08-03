@@ -25,20 +25,24 @@
             text-align: center;
             color: #444;
         }
-        .input-group {
+        .input-group, .settings-group {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap; /* 画面幅が狭い時に折り返す */
+            margin-bottom: 15px;
+            flex-wrap: wrap;
         }
-        input[type="text"], input[type="number"] {
-            /* flex: 1; を削除し、widthで幅を直接指定 */
-            width: calc(50% - 17px); /* 画面幅の半分から余白分を引く */
+        input[type="text"], input[type="number"], input[type="time"] {
             padding: 12px;
             border: 1px solid #ddd;
             border-radius: 5px;
             font-size: 16px;
-            box-sizing: border-box; /* paddingとborderをwidthに含める */
+            box-sizing: border-box;
+        }
+        .input-group input[type="text"], .input-group input[type="number"] {
+             width: calc(50% - 37px);
+        }
+        .settings-group input {
+            flex: 1;
         }
         button {
             padding: 12px 20px;
@@ -68,23 +72,31 @@
         #copyBtn:hover {
             background-color: #e0a800;
         }
-        ul, #result-text {
+        ul {
             list-style-type: none;
             padding: 0;
+        }
+        li {
+            padding: 10px 5px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        li:last-child {
+            border-bottom: none;
+        }
+        #result-area {
             background: #f9f9f9;
             border-radius: 5px;
             padding: 15px;
             border: 1px solid #eee;
         }
-        li {
-            padding: 10px 5px; /* 少し余白を調整 */
-            border-bottom: 1px solid #eee;
-            display: flex; /* Flexboxでレイアウト */
-            justify-content: space-between; /* 両端に寄せる */
-            align-items: center; /* 上下中央揃え */
-        }
-        li:last-child {
-            border-bottom: none;
+        #result-text {
+            white-space: pre-wrap; /* 改行をそのまま表示 */
+            font-family: monospace; /* 等幅フォントで見やすく */
+            font-size: 16px;
+            text-align: left;
         }
         #notification {
             text-align: center;
@@ -106,27 +118,34 @@
         <input type="number" id="travelTime" placeholder="移動時間（秒）">
         <button onclick="addMember()">追加</button>
     </div>
-
     <h2>登録リスト</h2>
     <ul id="memberList"></ul>
     <button onclick="clearList()" style="background-color: #dc3545; width: 100%; margin-bottom: 20px;">リストをクリア</button>
 
-    <h2>2. 出発時間を計算</h2>
-    <button id="calculateBtn" onclick="calculateDeparture()">出発時間を計算</button>
+    <h2>2. 出発情報を指定</h2>
+    <div class="settings-group">
+        <input type="text" id="targetName" placeholder="対象名 (例: 太陽城)">
+        <input type="time" id="startTime" >
+    </div>
 
-    <div id="result" style="display:none;">
+    <h2>3. 計算を実行</h2>
+    <button id="calculateBtn" onclick="calculateDeparture()">出発時刻を計算</button>
+
+    <div id="result" style="display:none; margin-top: 20px;">
         <h2>計算結果</h2>
-        <p id="result-text" style="white-space: pre-wrap;"></p>
+        <div id="result-area">
+            <pre id="result-text"></pre>
+        </div>
+        <br>
         <button id="copyBtn" onclick="copyResult()">結果をコピー</button>
         <p id="notification">コピーしました！</p>
     </div>
 </div>
 
 <script>
-    // データを保存するための配列
     let members = [];
 
-    // HTML要素を取得
+    // HTML要素の取得
     const leaderNameInput = document.getElementById('leaderName');
     const travelTimeInput = document.getElementById('travelTime');
     const memberList = document.getElementById('memberList');
@@ -134,11 +153,9 @@
     const resultText = document.getElementById('result-text');
     const notification = document.getElementById('notification');
 
-    // 「追加」ボタンの処理
     function addMember() {
         const name = leaderNameInput.value.trim();
         const time = parseInt(travelTimeInput.value, 10);
-
         if (name && !isNaN(time) && time > 0) {
             members.push({ name: name, time: time });
             renderList();
@@ -150,12 +167,10 @@
         }
     }
 
-    // 入力リストを画面に表示する処理（★修正箇所）
     function renderList() {
-        memberList.innerHTML = ''; // リストを一旦空にする
+        memberList.innerHTML = '';
         members.forEach((member, index) => {
             const li = document.createElement('li');
-            // li要素にテキストと削除ボタンを追加
             li.innerHTML = `
                 <span>${member.name} : ${member.time}秒</span>
                 <button onclick="removeMember(${index})" style="background-color: #6c757d; padding: 5px 10px; font-size: 14px;">削除</button>
@@ -164,19 +179,14 @@
         });
     }
 
-    // 「削除」ボタンの処理（★追加した関数）
     function removeMember(index) {
-        members.splice(index, 1); // 指定したインデックスの要素を配列から削除
-        renderList(); // リストを再描画
-        resultDiv.style.display = 'none'; // 計算結果が表示されていれば消す
+        members.splice(index, 1);
+        renderList();
+        resultDiv.style.display = 'none';
     }
     
-    // 「リストをクリア」ボタンの処理
     function clearList() {
-        if (members.length === 0) {
-            alert('リストは空です。');
-            return;
-        }
+        if (members.length === 0) { return; }
         if (confirm('本当にリストをクリアしますか？')) {
             members = [];
             renderList();
@@ -184,53 +194,71 @@
         }
     }
 
-    // 「出発時間を計算」ボタンの処理
+    // ★★★ 計算ロジックを大幅に変更 ★★★
     function calculateDeparture() {
-        if (members.length < 2) {
-            alert('比較するために、2つ以上のグループを追加してください。');
+        if (members.length === 0) {
+            alert('メンバーを追加してください。');
             return;
         }
 
-        // 最大移動時間を探す
+        const targetName = document.getElementById('targetName').value.trim();
+        const startTimeValue = document.getElementById('startTime').value;
+
+        if (!targetName) {
+            alert('対象名を入力してください。');
+            return;
+        }
+        if (!startTimeValue) {
+            alert('出発時刻を指定してください。');
+            return;
+        }
+
+        // 1. 各メンバーの遅延時間（秒）を計算
         const maxTime = Math.max(...members.map(m => m.time));
-
-        // 各メンバーの出発時間を計算
         const results = members.map(member => {
-            const departureTime = maxTime - member.time;
-            return { name: member.name, departure: departureTime };
+            const delaySeconds = maxTime - member.time;
+            return { name: member.name, delay: delaySeconds };
         });
+        results.sort((a, b) => a.delay - b.delay);
 
-        // 出発時間が短い順に並べ替え
-        results.sort((a, b) => a.departure - b.departure);
+        // 2. 指定された出発時刻をDateオブジェクトに変換
+        const [hours, minutes] = startTimeValue.split(':');
+        const baseDate = new Date();
+        baseDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
-        // 結果を整形して表示
-        const resultString = results.map(r => `${r.name}：${r.departure}秒後`).join('\n');
-        resultText.innerText = resultString;
+        // 3. 各メンバーの実際の出発時刻を計算し、文字列を作成
+        const leaderLines = results.map(result => {
+            const departureDate = new Date(baseDate.getTime());
+            departureDate.setSeconds(departureDate.getSeconds() + result.delay);
+
+            const depMinutes = String(departureDate.getMinutes()).padStart(2, '0');
+            const depSeconds = String(departureDate.getSeconds()).padStart(2, '0');
+            
+            return `${depMinutes}:${depSeconds} ${result.name}`;
+        }).join('\n'); // 各行を改行でつなぐ
+
+        // 4. 最終的な出力文字列を組み立てる
+        const finalOutput = `対象：${targetName}\n集結開始：${startTimeValue}:00\n${leaderLines}`;
+
+        // 5. 結果を表示
+        resultText.innerText = finalOutput;
         resultDiv.style.display = 'block';
     }
 
-    // 「結果をコピー」ボタンの処理
     function copyResult() {
         if (navigator.clipboard) {
             navigator.clipboard.writeText(resultText.innerText).then(() => {
-                // コピー成功の通知を表示
                 notification.style.opacity = 1;
-                setTimeout(() => {
-                    notification.style.opacity = 0;
-                }, 2000); // 2秒後に通知を消す
+                setTimeout(() => { notification.style.opacity = 0; }, 2000);
             });
         } else {
             alert('このブラウザはコピー機能に対応していません。');
         }
     }
     
-    // Enterキーで追加できるようにする
     travelTimeInput.addEventListener('keypress', function(event) {
-        if (event.key === 'Enter') {
-            addMember();
-        }
+        if (event.key === 'Enter') { addMember(); }
     });
-
 </script>
 
 </body>
