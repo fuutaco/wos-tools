@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>攻撃タイミング計算ツール</title>
+    <style>
+        /* 見た目を整えるためのCSS（デザイン） */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #444;
+        }
+        .input-group, .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="text"], input[type="number"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #calculateBtn {
+            width: 100%;
+            background-color: #28a745;
+        }
+        #calculateBtn:hover {
+            background-color: #218838;
+        }
+        #copyBtn {
+            width: 100%;
+            background-color: #ffc107;
+            color: #333;
+        }
+        #copyBtn:hover {
+            background-color: #e0a800;
+        }
+        ul, #result-text {
+            list-style-type: none;
+            padding: 0;
+            background: #f9f9f9;
+            border-radius: 5px;
+            padding: 15px;
+            border: 1px solid #eee;
+        }
+        li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        li:last-child {
+            border-bottom: none;
+        }
+        #notification {
+            text-align: center;
+            color: #28a745;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>攻撃タイミング計算ツール</h1>
+
+    <h2>1. メンバーを追加</h2>
+    <div class="input-group">
+        <input type="text" id="leaderName" placeholder="リーダー名">
+        <input type="number" id="travelTime" placeholder="移動時間（秒）">
+    </div>
+    <div class="button-group">
+        <button onclick="addMember()">追加</button>
+    </div>
+
+    <h2>登録リスト</h2>
+    <ul id="memberList"></ul>
+    <button onclick="clearList()" style="background-color: #dc3545; width: 100%; margin-bottom: 20px;">リストをクリア</button>
+
+
+    <h2>2. 出発時間を計算</h2>
+    <button id="calculateBtn" onclick="calculateDeparture()">出発時間を計算</button>
+
+    <div id="result" style="display:none;">
+        <h2>計算結果</h2>
+        <p id="result-text"></p>
+        <button id="copyBtn" onclick="copyResult()">結果をコピー</button>
+        <p id="notification">コピーしました！</p>
+    </div>
+</div>
+
+<script>
+    // データを保存するための配列
+    let members = [];
+
+    // HTML要素を取得
+    const leaderNameInput = document.getElementById('leaderName');
+    const travelTimeInput = document.getElementById('travelTime');
+    const memberList = document.getElementById('memberList');
+    const resultDiv = document.getElementById('result');
+    const resultText = document.getElementById('result-text');
+    const notification = document.getElementById('notification');
+
+    // 「追加」ボタンの処理
+    function addMember() {
+        const name = leaderNameInput.value.trim();
+        const time = parseInt(travelTimeInput.value, 10);
+
+        if (name && !isNaN(time) && time > 0) {
+            members.push({ name: name, time: time });
+            renderList();
+            leaderNameInput.value = '';
+            travelTimeInput.value = '';
+            leaderNameInput.focus();
+        } else {
+            alert('リーダー名と正しい移動時間を入力してください。');
+        }
+    }
+
+    // 入力リストを画面に表示する処理
+    function renderList() {
+        memberList.innerHTML = ''; // リストを一旦空にする
+        members.forEach((member, index) => {
+            const li = document.createElement('li');
+            li.textContent = `${member.name} : ${member.time}秒`;
+            memberList.appendChild(li);
+        });
+    }
+    
+    // 「リストをクリア」ボタンの処理
+    function clearList() {
+        if (confirm('本当にリストをクリアしますか？')) {
+            members = [];
+            renderList();
+            resultDiv.style.display = 'none';
+        }
+    }
+
+    // 「出発時間を計算」ボタンの処理
+    function calculateDeparture() {
+        if (members.length < 2) {
+            alert('比較するために、2つ以上のグループを追加してください。');
+            return;
+        }
+
+        // 最大移動時間を探す
+        const maxTime = Math.max(...members.map(m => m.time));
+
+        // 各メンバーの出発時間を計算
+        const results = members.map(member => {
+            const departureTime = maxTime - member.time;
+            return { name: member.name, departure: departureTime };
+        });
+
+        // 出発時間が短い順に並べ替え
+        results.sort((a, b) => a.departure - b.departure);
+
+        // 結果を整形して表示
+        const resultString = results.map(r => `${r.name}：${r.departure}秒後`).join('\n');
+        resultText.innerText = resultString;
+        resultDiv.style.display = 'block';
+    }
+
+    // 「結果をコピー」ボタンの処理
+    function copyResult() {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(resultText.innerText).then(() => {
+                // コピー成功の通知を表示
+                notification.style.opacity = 1;
+                setTimeout(() => {
+                    notification.style.opacity = 0;
+                }, 2000); // 2秒後に通知を消す
+            });
+        } else {
+            alert('このブラウザはコピー機能に対応していません。');
+        }
+    }
+    
+    // Enterキーで追加できるようにする
+    travelTimeInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            addMember();
+        }
+    });
+
+</script>
+
+</body>
+</html>
