@@ -122,10 +122,10 @@
     <ul id="memberList"></ul>
     <button onclick="clearList()" style="background-color: #dc3545; width: 100%; margin-bottom: 20px;">リストをクリア</button>
 
-    <h2>2. 出発情報を指定</h2>
+    <h2>2. 集結開始時間と対象を設定</h2>
     <div class="settings-group">
         <input type="text" id="targetName" placeholder="対象名 (例: 太陽城)">
-        <input type="time" id="startTime" >
+        <input type="time" id="startTime" placeholder="HH:mm">
     </div>
 
     <h2>3. 計算を実行</h2>
@@ -227,18 +227,21 @@
         baseDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
         // 3. 各メンバーの実際の出発時刻を計算し、文字列を作成
+        // 変更箇所②：出発時刻のフォーマットをHH:mm:ssに修正
         const leaderLines = results.map(result => {
             const departureDate = new Date(baseDate.getTime());
             departureDate.setSeconds(departureDate.getSeconds() + result.delay);
 
+            const depHours = String(departureDate.getHours()).padStart(2, '0');
             const depMinutes = String(departureDate.getMinutes()).padStart(2, '0');
             const depSeconds = String(departureDate.getSeconds()).padStart(2, '0');
             
-            return `${depMinutes}:${depSeconds} ${result.name}`;
+            return `${depHours}:${depMinutes}:${depSeconds} ${result.name}`;
         }).join('\n'); // 各行を改行でつなぐ
 
         // 4. 最終的な出力文字列を組み立てる
-        const finalOutput = `対象：${targetName}\n集結開始：${startTimeValue}:00\n${leaderLines}`;
+        // 変更箇所③：「集結開始」の行を削除
+        const finalOutput = `対象：${targetName}\n${leaderLines}`;
 
         // 5. 結果を表示
         resultText.innerText = finalOutput;
