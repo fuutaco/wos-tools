@@ -29,5 +29,5 @@
 
 ## ライセンス
 
-このプロジェクトは、MIT Licenseの下で公開されています。
+このプロジェクトは、[MIT License](https://github.com/fuutaco/wos-tools/blob/main/LICENSE)の下で公開されています。
   * このREADMEは、ツールの概要、機能、使い方、動作環境が明確に伝わるように構成されています。
