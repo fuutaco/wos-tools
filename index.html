@@ -1,291 +1,362 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>攻撃タイミング計算ツール</title>
-    <!--
-    MIT License
-    
-    Copyright (c) 2025 fuutaco
-    
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-    
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-    
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
-    -->
-    <style>
-        /* 見た目を整えるためのCSS（デザイン） */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
-            margin: 20px;
-            background-color: #f4f4f9;
-            color: #333;
-        }
-        .container {
-            max-width: 600px;
-            margin: auto;
-            background: #fff;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1, h2 {
-            text-align: center;
-            color: #444;
-        }
-        .input-group, .settings-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-        input[type="text"], input[type="number"], input[type="time"] {
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-        .input-group input[type="text"], .input-group input[type="number"] {
-             width: calc(50% - 37px);
-        }
-        .settings-group input {
-            flex: 1;
-        }
-        button {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 5px;
-            background-color: #007bff;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        #calculateBtn {
-            width: 100%;
-            background-color: #28a745;
-        }
-        #calculateBtn:hover {
-            background-color: #218838;
-        }
-        #copyBtn {
-            width: 100%;
-            background-color: #ffc107;
-            color: #333;
-        }
-        #copyBtn:hover {
-            background-color: #e0a800;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        li {
-            padding: 10px 5px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        li:last-child {
-            border-bottom: none;
-        }
-        #result-area {
-            background: #f9f9f9;
-            border-radius: 5px;
-            padding: 15px;
-            border: 1px solid #eee;
-        }
-        #result-text {
-            white-space: pre-wrap; /* 改行をそのまま表示 */
-            font-family: monospace; /* 等幅フォントで見やすく */
-            font-size: 16px;
-            text-align: left;
-        }
-        #notification {
-            text-align: center;
-            color: #28a745;
-            font-weight: bold;
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>攻撃タイミング計算ツール</title>
+  <meta name="color-scheme" content="light dark" />
+  <style>
+    :root{
+      --accent:#1e6fff; --bg:#f7f9fc; --text:#222; --muted:#667085; --border:#d0d7e2;
+      --card:#ffffff; --code:#0b1020; --codeText:#e5e7eb;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{ --bg:#0f172a; --text:#eef2ff; --muted:#94a3b8; --border:#263043; --card:#0b1222; --code:#00050f; --codeText:#e5e7eb; --accent:#5ea0ff; }
+    }
+    html,body{font-family:"Meiryo","Yu Gothic UI",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);margin:0}
+    .container{max-width:980px;margin:20px auto 64px;padding:0 16px}
+    h1{font-size:20px;margin:0 0 12px} h2{font-size:18px;margin:24px 0 8px} h3{font-size:16px;margin:16px 0 8px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:12px;box-shadow:0 1px 1px rgba(0,0,0,.03)}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    input[type="text"],input[type="number"]{border:1px solid var(--border);background:transparent;color:inherit;border-radius:10px;padding:10px 12px;min-width:0;font-size:16px}
+    input[name^="targetName"]{width:160px}
+    input.member-name{width:200px}
+    input.time-cell{width:100px;text-align:right}
+    .btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;touch-action:manipulation}
+    .btn.secondary{background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe}
+    .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .btn.danger{background:#ef4444}
+    .spacer{flex:1}
+    .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;border:1px solid var(--border);background:var(--card)}
+    table{width:100%;border-collapse:collapse}
+    thead th{position:sticky;top:0;background:rgba(127,139,163,.12);backdrop-filter:saturate(1.8) blur(4px);font-size:13px;color:#374151}
+    @media (prefers-color-scheme: dark){ thead th{color:#cbd5e1} }
+    th,td{border-bottom:1px solid var(--border);padding:10px;text-align:left;vertical-align:middle;white-space:nowrap}
+    tbody tr:hover{background:rgba(127,139,163,.08)}
+    .result{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--code);color:var(--codeText);border-radius:10px;padding:12px;min-height:120px}
+    .hint{color:var(--muted);font-size:12px}
+    .toast{display:none;position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:10px 12px;border-radius:8px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:999}
+    .toast.show{display:inline-block;animation:fade 2.2s ease}
+    @keyframes fade{0%{opacity:0;transform:translateY(6px)}10%{opacity:1;transform:none}90%{opacity:1}100%{opacity:0}}
+  </style>
 </head>
 <body>
-
-<div class="container">
+  <div class="container">
     <h1>攻撃タイミング計算ツール</h1>
 
-    <h2>1. メンバーを追加</h2>
-    <div class="input-group">
-        <input type="text" id="leaderName" placeholder="リーダー名">
-        <input type="number" id="travelTime" placeholder="移動時間（秒）">
-        <button onclick="addMember()">追加</button>
-    </div>
-    <h2>登録リスト</h2>
-    <ul id="memberList"></ul>
-    <button onclick="clearList()" style="background-color: #dc3545; width: 100%; margin-bottom: 20px;">リストをクリア</button>
-
-    <h2>2. 集結開始時間と対象を設定</h2>
-    <div class="settings-group">
-        <input type="text" id="targetName" placeholder="対象名 (例: 太陽城)">
-        <input type="time" id="startTime" placeholder="HH:mm">
+    <!-- 対象（最大5か所） -->
+    <div class="card">
+      <h2>1. 対象（最大5か所）を設定</h2>
+      <div class="row" style="gap:12px;margin-top:8px">
+        <input type="text" id="targetName1" name="targetName1" placeholder="対象1 名称（例：太陽城）">
+        <input type="text" id="targetName2" name="targetName2" placeholder="対象2 名称">
+        <input type="text" id="targetName3" name="targetName3" placeholder="対象3 名称">
+        <input type="text" id="targetName4" name="targetName4" placeholder="対象4 名称">
+        <input type="text" id="targetName5" name="targetName5" placeholder="対象5 名称">
+      </div>
+      <div class="hint" style="margin-top:6px">対象名が入力された列だけ計算・出力します。</div>
     </div>
 
-    <h2>3. 計算を実行</h2>
-    <button id="calculateBtn" onclick="calculateDeparture()">出発時刻を計算</button>
+    <!-- メンバー＆マトリクス -->
+    <div class="card">
+      <h2>2. メンバーと対象ごとの移動時間（秒）を入力</h2>
+      <div class="row" style="margin-bottom:10px">
+        <input class="member-name" id="memberName" type="text" placeholder="メンバー名（例：Aさん）" />
+        <button class="btn" id="addMemberBtn">追加</button>
+        <div class="spacer"></div>
+        <button class="btn ghost" id="clearListBtn" title="メンバー行だけ削除">メンバー表をクリア</button>
+        <button class="btn danger" id="wipeAllBtn" title="保存データも含め完全初期化">すべて消去</button>
+      </div>
 
-    <div id="result" style="display:none; margin-top: 20px;">
-        <h2>計算結果</h2>
-        <div id="result-area">
-            <pre id="result-text"></pre>
-        </div>
-        <br>
-        <button id="copyBtn" onclick="copyResult()">結果をコピー</button>
-        <p id="notification">コピーしました！</p>
+      <div class="hint" style="margin-bottom:8px">
+        時間は <b>秒</b> または <b>分:秒</b>（例：<code>97</code> / <code>1:37</code>）で入力できます。
+        出力は 60秒超で <code>M:SS</code>、3600秒超で <code>H:MM:SS</code> になります。
+        入力は自動保存され、次回アクセス時に復元されます（この端末・このブラウザのみ）。
+      </div>
+
+      <div class="table-wrap">
+        <table id="matrix" role="table" aria-label="移動時間マトリクス">
+          <thead>
+            <tr>
+              <th style="width:220px">メンバー名</th>
+              <th>対象1</th>
+              <th>対象2</th>
+              <th>対象3</th>
+              <th>対象4</th>
+              <th>対象5</th>
+              <th style="width:84px">操作</th>
+            </tr>
+          </thead>
+          <tbody><!-- 追加したメンバー行が入ります --></tbody>
+        </table>
+      </div>
     </div>
-</div>
 
-<script>
-    let members = [];
+    <!-- 実行＆結果 -->
+    <div class="card">
+      <h2>3. 計算を実行</h2>
+      <div class="row" style="margin-bottom:12px">
+        <button class="btn" id="calcBtn">出発時刻を計算</button>
+        <button class="btn secondary" id="copyBtn">結果をコピー</button>
+        <span class="hint">表示ルール：先頭は<b>秒</b>。60秒超は <code>M:SS</code>、3600秒超は <code>H:MM:SS</code>。</span>
+      </div>
+      <div id="result" class="result" aria-live="polite"></div>
+    </div>
+  </div>
 
-    // HTML要素の取得
-    const leaderNameInput = document.getElementById('leaderName');
-    const travelTimeInput = document.getElementById('travelTime');
-    const memberList = document.getElementById('memberList');
-    const resultDiv = document.getElementById('result');
-    const resultText = document.getElementById('result-text');
-    const notification = document.getElementById('notification');
+  <div id="toast" class="toast">コピーしました！</div>
 
-    function addMember() {
-        const name = leaderNameInput.value.trim();
-        const time = parseInt(travelTimeInput.value, 10);
-        if (name && !isNaN(time) && time > 0) {
-            members.push({ name: name, time: time });
-            renderList();
-            leaderNameInput.value = '';
-            travelTimeInput.value = '';
-            leaderNameInput.focus();
+  <script>
+    // ====== ユーティリティ ======
+    const q = (sel, root=document) => root.querySelector(sel);
+    const qa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+    const STORAGE_KEY = "atk-calc-v2"; // v2: H:MM:SS対応＋自動保存
+
+    const state = {
+      targets: ["","","","",""], // targetName1..5
+      rows: [] // [{id,name, times:[string,string,string,string,string]}] ※文字列はユーザ入力を保持
+    };
+
+    function parseTimeToSeconds(v) {
+      if (v == null) return null;
+      v = (""+v).trim();
+      if (!v) return null;
+      // 分:秒 を許容（入力は h:m:s までは想定しない）
+      if (v.includes(":")) {
+        const parts = v.split(":").map(x => x.trim());
+        if (parts.length === 2) {
+          const [m,s] = parts;
+          const mi = parseInt(m,10), si = parseInt(s,10);
+          if (Number.isNaN(mi) || Number.isNaN(si) || si<0 || si>=60) return null;
+          return mi*60 + si;
+        } else if (parts.length === 3) {
+          // 入力で H:MM:SS を入れてもOKにしておく（任意）
+          const [h,m,s] = parts.map(n=>parseInt(n,10));
+          if ([h,m,s].some(x=>Number.isNaN(x)) || m<0 || m>=60 || s<0 || s>=60) return null;
+          return h*3600 + m*60 + s;
         } else {
-            alert('リーダー名と正しい移動時間を入力してください。');
+          return null;
         }
+      } else {
+        const sec = Number(v);
+        if (!Number.isFinite(sec) || sec < 0) return null;
+        return Math.floor(sec);
+      }
     }
 
-    function renderList() {
-        memberList.innerHTML = '';
-        members.forEach((member, index) => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <span>${member.name} : ${member.time}秒</span>
-                <button onclick="removeMember(${index})" style="background-color: #6c757d; padding: 5px 10px; font-size: 14px;">削除</button>
-            `;
-            memberList.appendChild(li);
+    function formatSeconds(sec) {
+      if (sec < 60) {
+        return String(sec).padStart(2, "0");
+      } else if (sec < 3600) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m}:${String(s).padStart(2,"0")}`;
+      } else {
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+        return `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+      }
+    }
+
+    function showToast(msg="コピーしました！") {
+      const t = q("#toast");
+      t.textContent = msg;
+      t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
+      setTimeout(()=>t.classList.remove("show"), 2100);
+    }
+
+    // ====== 保存/復元 ======
+    function saveState() {
+      // DOM -> state
+      state.targets = [1,2,3,4,5].map(i => q("#targetName"+i).value);
+      state.rows = qa("#matrix tbody tr").map(tr => {
+        const id = Number(tr.dataset.id);
+        const name = tr.querySelector("td:first-child input")?.value ?? "";
+        const timeInputs = qa("td:nth-child(n+2):nth-last-child(n+2) input", tr);
+        const times = timeInputs.slice(0,5).map(inp => inp.value);
+        return { id, name, times };
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      try {
+        const s = JSON.parse(raw);
+        if (!s || !Array.isArray(s.targets) || !Array.isArray(s.rows)) return false;
+        // 反映（対象）
+        s.targets.slice(0,5).forEach((v,i)=>{ const el=q("#targetName"+(i+1)); if (el) el.value = v ?? ""; });
+        // 反映（メンバー行）
+        clearList(false);
+        s.rows.forEach(r => addMemberRow(r.name, r.times));
+        return true;
+      } catch { return false; }
+    }
+
+    function wipeAll() {
+      localStorage.removeItem(STORAGE_KEY);
+      // UIも初期化
+      [1,2,3,4,5].forEach(i => q("#targetName"+i).value = "");
+      clearList(false);
+      q("#result").textContent = "";
+      showToast("すべて消去しました");
+    }
+
+    // ====== データモデル ======
+    let nextId = 1;
+
+    function clearList(save=true) {
+      qa("#matrix tbody tr").forEach(tr => tr.remove());
+      nextId = 1;
+      if (save) saveState();
+    }
+
+    function addMemberRow(name, presetTimes) {
+      const tbody = q("#matrix tbody");
+      const id = nextId++;
+
+      const tr = document.createElement("tr");
+      tr.dataset.id = String(id);
+
+      // メンバー名
+      const nameTd = document.createElement("td");
+      const nameInput = document.createElement("input");
+      nameInput.className = "member-name";
+      nameInput.type = "text";
+      nameInput.placeholder = "メンバー名";
+      nameInput.value = name || "";
+      nameInput.addEventListener("input", saveState);
+      nameTd.appendChild(nameInput);
+      tr.appendChild(nameTd);
+
+      // 対象1〜5
+      for (let i=0;i<5;i++){
+        const td = document.createElement("td");
+        const inp = document.createElement("input");
+        inp.className = "time-cell";
+        inp.type = "text";
+        inp.inputMode = "numeric"; // iPhoneで数字キーボード出しやすく
+        inp.placeholder = "秒 or 分:秒";
+        if (presetTimes && typeof presetTimes[i] === "string") inp.value = presetTimes[i];
+        inp.addEventListener("input", saveState);
+        td.appendChild(inp);
+        tr.appendChild(td);
+      }
+
+      // 操作
+      const opTd = document.createElement("td");
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn ghost";
+      delBtn.textContent = "削除";
+      delBtn.addEventListener("click", () => {
+        tr.remove();
+        saveState();
+      });
+      opTd.appendChild(delBtn);
+      tr.appendChild(opTd);
+
+      tbody.appendChild(tr);
+      saveState();
+    }
+
+    function collectForCalc() {
+      const targets = [1,2,3,4,5].map(i => q("#targetName"+i).value.trim());
+      const rows = qa("#matrix tbody tr").map(tr => {
+        const name = tr.querySelector("td:first-child input")?.value.trim() ?? "";
+        const timeInputs = qa("td:nth-child(n+2):nth-last-child(n+2) input", tr);
+        const times = timeInputs.slice(0,5).map(inp => parseTimeToSeconds(inp.value));
+        return { name, times };
+      });
+      return { targets, rows };
+    }
+
+    function buildResults() {
+      const { targets, rows } = collectForCalc();
+      const blocks = [];
+
+      targets.forEach((tName, idx) => {
+        if (!tName) return;
+
+        // 対象 idx に対して有効な時間を持つメンバーを抽出
+        const list = [];
+        rows.forEach(r => {
+          if (!r.name) return;
+          const sec = r.times[idx];
+          if (sec == null) return;
+          list.push({ name: r.name, sec });
         });
+
+        if (list.length === 0) return;
+
+        // 秒昇順 → 名前順
+        list.sort((a,b)=> a.sec - b.sec || a.name.localeCompare(b.name, "ja"));
+
+        const lines = ["対象：" + tName];
+        list.forEach(item => lines.push(`${formatSeconds(item.sec)} ${item.name}`));
+
+        blocks.push(lines.join("\n"));
+      });
+
+      return blocks.join("\n\n");
     }
 
-    function removeMember(index) {
-        members.splice(index, 1);
-        renderList();
-        resultDiv.style.display = 'none';
-    }
-    
-    function clearList() {
-        if (members.length === 0) { return; }
-        if (confirm('本当にリストをクリアしますか？')) {
-            members = [];
-            renderList();
-            resultDiv.style.display = 'none';
-        }
+    function renderResults() {
+      const txt = buildResults();
+      q("#result").textContent = txt;
+      return txt;
     }
 
-    // ★★★ 計算ロジックを大幅に変更 ★★★
-    function calculateDeparture() {
-        if (members.length === 0) {
-            alert('メンバーを追加してください。');
-            return;
-        }
-
-        const targetName = document.getElementById('targetName').value.trim();
-        const startTimeValue = document.getElementById('startTime').value;
-
-        if (!targetName) {
-            alert('対象名を入力してください。');
-            return;
-        }
-        if (!startTimeValue) {
-            alert('出発時刻を指定してください。');
-            return;
-        }
-
-        // 1. 各メンバーの遅延時間（秒）を計算
-        const maxTime = Math.max(...members.map(m => m.time));
-        const results = members.map(member => {
-            const delaySeconds = maxTime - member.time;
-            return { name: member.name, delay: delaySeconds };
-        });
-        results.sort((a, b) => a.delay - b.delay);
-
-        // 2. 指定された出発時刻をDateオブジェクトに変換
-        const [hours, minutes] = startTimeValue.split(':');
-        const baseDate = new Date();
-        baseDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-
-        // 3. 各メンバーの実際の出発時刻を計算し、文字列を作成
-        // 変更箇所②：出発時刻のフォーマットをHH:mm:ssに修正
-        const leaderLines = results.map(result => {
-            const departureDate = new Date(baseDate.getTime());
-            departureDate.setSeconds(departureDate.getSeconds() + result.delay);
-
-            const depHours = String(departureDate.getHours()).padStart(2, '0');
-            const depMinutes = String(departureDate.getMinutes()).padStart(2, '0');
-            const depSeconds = String(departureDate.getSeconds()).padStart(2, '0');
-            
-            return `${depHours}:${depMinutes}:${depSeconds} ${result.name}`;
-        }).join('\n'); // 各行を改行でつなぐ
-
-        // 4. 最終的な出力文字列を組み立てる
-        // 変更箇所③：「集結開始」の行を削除
-        const finalOutput = `対象：${targetName}\n${leaderLines}`;
-
-        // 5. 結果を表示
-        resultText.innerText = finalOutput;
-        resultDiv.style.display = 'block';
-    }
-
-    function copyResult() {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(resultText.innerText).then(() => {
-                notification.style.opacity = 1;
-                setTimeout(() => { notification.style.opacity = 0; }, 2000);
-            });
-        } else {
-            alert('このブラウザはコピー機能に対応していません。');
-        }
-    }
-    
-    travelTimeInput.addEventListener('keypress', function(event) {
-        if (event.key === 'Enter') { addMember(); }
+    // ====== イベント束ね ======
+    q("#addMemberBtn").addEventListener("click", () => {
+      const name = q("#memberName").value.trim();
+      addMemberRow(name);
+      q("#memberName").value = "";
+      q("#memberName").focus();
     });
-</script>
 
+    q("#clearListBtn").addEventListener("click", () => {
+      if (confirm("メンバー表を空にします。よろしいですか？")) clearList();
+    });
+
+    q("#wipeAllBtn").addEventListener("click", () => {
+      if (confirm("対象・メンバー・保存データをすべて消去します。よろしいですか？")) wipeAll();
+    });
+
+    q("#calcBtn").addEventListener("click", renderResults);
+
+    q("#copyBtn").addEventListener("click", async () => {
+      const txt = renderResults();
+      if (!txt) { showToast("コピー対象の結果がありません"); return; }
+      try {
+        await navigator.clipboard.writeText(txt);
+        showToast("コピーしました！");
+      } catch(e){
+        // フォールバック（iOS含む）
+        const ta = document.createElement("textarea");
+        ta.value = txt;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast(ok ? "コピーしました！" : "コピーできませんでした");
+      }
+    });
+
+    // 対象名の保存
+    [1,2,3,4,5].forEach(i => q("#targetName"+i).addEventListener("input", saveState));
+
+    // 初期復元
+    window.addEventListener("DOMContentLoaded", () => {
+      const restored = loadState();
+      if (!restored) {
+        // 初期は空（必要ならサンプル自動投入も可）
+        // addMemberRow("Aさん"); addMemberRow("Bさん"); addMemberRow("Cさん");
+      }
+    });
+  </script>
 </body>
 </html>
