@@ -1,362 +1,335 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>攻撃タイミング計算ツール</title>
-  <meta name="color-scheme" content="light dark" />
-  <style>
-    :root{
-      --accent:#1e6fff; --bg:#f7f9fc; --text:#222; --muted:#667085; --border:#d0d7e2;
-      --card:#ffffff; --code:#0b1020; --codeText:#e5e7eb;
-    }
-    @media (prefers-color-scheme: dark){
-      :root{ --bg:#0f172a; --text:#eef2ff; --muted:#94a3b8; --border:#263043; --card:#0b1222; --code:#00050f; --codeText:#e5e7eb; --accent:#5ea0ff; }
-    }
-    html,body{font-family:"Meiryo","Yu Gothic UI",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);margin:0}
-    .container{max-width:980px;margin:20px auto 64px;padding:0 16px}
-    h1{font-size:20px;margin:0 0 12px} h2{font-size:18px;margin:24px 0 8px} h3{font-size:16px;margin:16px 0 8px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:12px;box-shadow:0 1px 1px rgba(0,0,0,.03)}
-    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    input[type="text"],input[type="number"]{border:1px solid var(--border);background:transparent;color:inherit;border-radius:10px;padding:10px 12px;min-width:0;font-size:16px}
-    input[name^="targetName"]{width:160px}
-    input.member-name{width:200px}
-    input.time-cell{width:100px;text-align:right}
-    .btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;touch-action:manipulation}
-    .btn.secondary{background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe}
-    .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
-    .btn.danger{background:#ef4444}
-    .spacer{flex:1}
-    .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;border:1px solid var(--border);background:var(--card)}
-    table{width:100%;border-collapse:collapse}
-    thead th{position:sticky;top:0;background:rgba(127,139,163,.12);backdrop-filter:saturate(1.8) blur(4px);font-size:13px;color:#374151}
-    @media (prefers-color-scheme: dark){ thead th{color:#cbd5e1} }
-    th,td{border-bottom:1px solid var(--border);padding:10px;text-align:left;vertical-align:middle;white-space:nowrap}
-    tbody tr:hover{background:rgba(127,139,163,.08)}
-    .result{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--code);color:var(--codeText);border-radius:10px;padding:12px;min-height:120px}
-    .hint{color:var(--muted);font-size:12px}
-    .toast{display:none;position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:10px 12px;border-radius:8px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:999}
-    .toast.show{display:inline-block;animation:fade 2.2s ease}
-    @keyframes fade{0%{opacity:0;transform:translateY(6px)}10%{opacity:1;transform:none}90%{opacity:1}100%{opacity:0}}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>到着同期タイミング計算ツール</title>
+<style>
+  :root{
+    --fg:#1b1f23; --bg:#fff; --muted:#6a737d; --pri:#0366d6; --ok:#107c10; --warn:#d83b01; --bd:#e1e4e8;
+    --pad:8px; --gap:8px; --radius:8px;
+    --fw-zenkaku-4: 4em; /* 全角4文字相当 */
+    --fw-hankaku-5: 5ch; /* 半角5文字相当 */
+  }
+  html,body{height:100%;}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Meiryo,system-ui,sans-serif;}
+  h1{font-size:18px;margin:16px;}
+  h2{font-size:16px;margin:16px;}
+  .container{padding:0 12px 80px;}
+  .note{color:var(--muted);font-size:12px;margin:4px 0 12px;}
+
+  /* 対象名 5つを横1行で固定（必要なら横スクロール） */
+  .targets-bar{
+    display:flex; gap:var(--gap); align-items:center; overflow-x:auto; white-space:nowrap; padding:0 12px 8px;
+  }
+  .targets-bar .tcell{display:flex; align-items:center; gap:4px;}
+  .targets-bar label{font-size:12px; color:var(--muted);}
+  input[type="text"], input[type="tel"]{
+    font-size:14px; padding:4px 6px; border:1px solid var(--bd); border-radius:6px; background:#fff; color:var(--fg);
+    box-sizing:content-box; /* content幅＝指定幅 */
+  }
+  .target-name{width:var(--fw-zenkaku-4);}
+  .member-name{width:var(--fw-zenkaku-4);}
+  .time-cell input{width:var(--fw-hankaku-5); text-align:right;}
+  .toolbar{display:flex; gap:8px; padding:8px 12px; flex-wrap:wrap;}
+  .btn{
+    appearance:none; border:1px solid var(--bd); background:#f6f8fa; color:#24292e; padding:6px 10px; border-radius:6px; cursor:pointer;
+  }
+  .btn.primary{background:var(--pri); color:#fff; border-color:transparent;}
+  .btn.ghost{background:transparent;}
+  .btn.danger{border-color:#ffd1cf; background:#fff5f5; color:#a4262c;}
+  .btn:active{transform:translateY(1px);}
+  .copy-once{background:#e8f5e9; border-color:#c8e6c9; color:#107c10;}
+
+  table{width:100%; border-collapse:separate; border-spacing:0 6px; table-layout:fixed;}
+  colgroup col.c-member{width:calc(var(--fw-zenkaku-4) + 14px);}
+  colgroup col.c-op{width:68px;}
+  colgroup col.c-time{width:calc(var(--fw-hankaku-5) + 14px);}
+  thead th{position:sticky; top:0; background:#fff; z-index:1; font-weight:600; font-size:12px; color:#57606a; padding:2px 4px;}
+  tbody td{padding:0 4px;}
+  tbody tr{background:#fff;}
+  tbody tr td:first-child{padding-left:8px;}
+  tbody tr td:last-child{padding-right:8px;}
+  .op-col{display:flex; gap:6px; justify-content:flex-end; align-items:center;}
+  .small{font-size:12px; color:var(--muted);}
+  .results{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:12px; padding:8px 12px 24px;}
+  .card{border:1px solid var(--bd); border-radius:8px; padding:8px; background:#fff;}
+  .card h3{margin:0 0 6px; font-size:14px;}
+  .list{margin:0; padding-left:16px;}
+  .list li{margin:2px 0;}
+  .toast{position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:#24292e; color:#fff; padding:8px 12px; border-radius:999px; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; font-size:13px;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
+  /* スマホ寄りの詰め */
+  @media (max-width:480px){
+    body{font-size:13px;}
+    .btn{padding:6px 8px;}
+    .results{grid-template-columns:1fr 1fr;}
+  }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>攻撃タイミング計算ツール</h1>
+  <h1>到着同期タイミング計算ツール</h1>
 
-    <!-- 対象（最大5か所） -->
-    <div class="card">
-      <h2>1. 対象（最大5か所）を設定</h2>
-      <div class="row" style="gap:12px;margin-top:8px">
-        <input type="text" id="targetName1" name="targetName1" placeholder="対象1 名称（例：太陽城）">
-        <input type="text" id="targetName2" name="targetName2" placeholder="対象2 名称">
-        <input type="text" id="targetName3" name="targetName3" placeholder="対象3 名称">
-        <input type="text" id="targetName4" name="targetName4" placeholder="対象4 名称">
-        <input type="text" id="targetName5" name="targetName5" placeholder="対象5 名称">
-      </div>
-      <div class="hint" style="margin-top:6px">対象名が入力された列だけ計算・出力します。</div>
-    </div>
-
-    <!-- メンバー＆マトリクス -->
-    <div class="card">
-      <h2>2. メンバーと対象ごとの移動時間（秒）を入力</h2>
-      <div class="row" style="margin-bottom:10px">
-        <input class="member-name" id="memberName" type="text" placeholder="メンバー名（例：Aさん）" />
-        <button class="btn" id="addMemberBtn">追加</button>
-        <div class="spacer"></div>
-        <button class="btn ghost" id="clearListBtn" title="メンバー行だけ削除">メンバー表をクリア</button>
-        <button class="btn danger" id="wipeAllBtn" title="保存データも含め完全初期化">すべて消去</button>
-      </div>
-
-      <div class="hint" style="margin-bottom:8px">
-        時間は <b>秒</b> または <b>分:秒</b>（例：<code>97</code> / <code>1:37</code>）で入力できます。
-        出力は 60秒超で <code>M:SS</code>、3600秒超で <code>H:MM:SS</code> になります。
-        入力は自動保存され、次回アクセス時に復元されます（この端末・このブラウザのみ）。
-      </div>
-
-      <div class="table-wrap">
-        <table id="matrix" role="table" aria-label="移動時間マトリクス">
-          <thead>
-            <tr>
-              <th style="width:220px">メンバー名</th>
-              <th>対象1</th>
-              <th>対象2</th>
-              <th>対象3</th>
-              <th>対象4</th>
-              <th>対象5</th>
-              <th style="width:84px">操作</th>
-            </tr>
-          </thead>
-          <tbody><!-- 追加したメンバー行が入ります --></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- 実行＆結果 -->
-    <div class="card">
-      <h2>3. 計算を実行</h2>
-      <div class="row" style="margin-bottom:12px">
-        <button class="btn" id="calcBtn">出発時刻を計算</button>
-        <button class="btn secondary" id="copyBtn">結果をコピー</button>
-        <span class="hint">表示ルール：先頭は<b>秒</b>。60秒超は <code>M:SS</code>、3600秒超は <code>H:MM:SS</code>。</span>
-      </div>
-      <div id="result" class="result" aria-live="polite"></div>
-    </div>
+  <!-- 対象名 5つ（横並び固定） -->
+  <div class="targets-bar" id="targetsBar" aria-label="対象名">
+    <div class="tcell"><label>対象1</label><input class="target-name" data-col="0" type="text" maxlength="4" placeholder="例）本丸"></div>
+    <div class="tcell"><label>対象2</label><input class="target-name" data-col="1" type="text" maxlength="4" placeholder="A門"></div>
+    <div class="tcell"><label>対象3</label><input class="target-name" data-col="2" type="text" maxlength="4" placeholder="B塔"></div>
+    <div class="tcell"><label>対象4</label><input class="target-name" data-col="3" type="text" maxlength="4" placeholder="C砦"></div>
+    <div class="tcell"><label>対象5</label><input class="target-name" data-col="4" type="text" maxlength="4" placeholder="外郭"></div>
   </div>
 
-  <div id="toast" class="toast">コピーしました！</div>
+  <div class="note" style="padding:0 12px;">
+    時間は <b>秒</b> または <b>分:秒</b>（例：<code>97</code> / <code>1:37</code>）あるいは <b>時:分:秒</b>（例：<code>1:02:03</code>）で入力できます。<br>
+    出力は <b>&lt;60秒</b> は「秒」、<b>60秒〜</b> は「分:秒」、<b>3600秒〜</b> は「時:分:秒」で表示します。入力はこの端末のブラウザに<b>自動保存</b>されます。
+  </div>
 
-  <script>
-    // ====== ユーティリティ ======
-    const q = (sel, root=document) => root.querySelector(sel);
-    const qa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-    const STORAGE_KEY = "atk-calc-v2"; // v2: H:MM:SS対応＋自動保存
+  <div class="toolbar">
+    <button class="btn" id="addRowBtn">追加</button>
+    <button class="btn ghost" id="clearMembersBtn">メンバー表をクリア</button>
+    <button class="btn danger" id="clearAllBtn">すべて消去</button>
+    <span class="small">※「結果をコピー（全体）」は設けず、対象ごとのコピーのみ対応</span>
+  </div>
 
-    const state = {
-      targets: ["","","","",""], // targetName1..5
-      rows: [] // [{id,name, times:[string,string,string,string,string]}] ※文字列はユーザ入力を保持
-    };
+  <div class="container">
+    <table id="grid" aria-label="メンバーと対象ごとの移動時間">
+      <colgroup>
+        <col class="c-member">
+        <col class="c-time"><col class="c-time"><col class="c-time"><col class="c-time"><col class="c-time">
+        <col class="c-op">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>メンバー名</th>
+          <th>対象1</th>
+          <th>対象2</th>
+          <th>対象3</th>
+          <th>対象4</th>
+          <th>対象5</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <!-- 行はJSで生成 -->
+      </tbody>
+    </table>
 
-    function parseTimeToSeconds(v) {
-      if (v == null) return null;
-      v = (""+v).trim();
-      if (!v) return null;
-      // 分:秒 を許容（入力は h:m:s までは想定しない）
-      if (v.includes(":")) {
-        const parts = v.split(":").map(x => x.trim());
-        if (parts.length === 2) {
-          const [m,s] = parts;
-          const mi = parseInt(m,10), si = parseInt(s,10);
-          if (Number.isNaN(mi) || Number.isNaN(si) || si<0 || si>=60) return null;
-          return mi*60 + si;
-        } else if (parts.length === 3) {
-          // 入力で H:MM:SS を入れてもOKにしておく（任意）
-          const [h,m,s] = parts.map(n=>parseInt(n,10));
-          if ([h,m,s].some(x=>Number.isNaN(x)) || m<0 || m>=60 || s<0 || s>=60) return null;
-          return h*3600 + m*60 + s;
-        } else {
-          return null;
-        }
-      } else {
-        const sec = Number(v);
-        if (!Number.isFinite(sec) || sec < 0) return null;
-        return Math.floor(sec);
+    <div class="toolbar">
+      <button class="btn primary" id="calcBtn">出発時刻を計算</button>
+    </div>
+
+    <section class="results" id="results" aria-live="polite" aria-label="計算結果（対象ごと）">
+      <!-- 対象ごとのカードをJSで描画 -->
+    </section>
+  </div>
+
+  <div class="toast" id="toast">コピーしました！</div>
+
+<script>
+(() => {
+  const LS_KEY = 'arrival-sync-v1';
+  const tbody = document.getElementById('tbody');
+  const results = document.getElementById('results');
+  const toast = document.getElementById('toast');
+
+  // --- ユーティリティ ---
+  const z2hColon = s => (s || '').replace(/：/g, ':').trim();
+  function parseTimeToSec(raw){
+    if(!raw) return null;
+    let s = z2hColon(raw).replace(/[秒sＳ]$/i,'').trim();
+    if(!s) return null;
+    if(!/^[0-9:]+$/.test(s)) return null;
+    const parts = s.split(':').map(n => n === '' ? NaN : Number(n));
+    if(parts.some(n => Number.isNaN(n))) return null;
+    if(parts.length === 1){
+      return parts[0];
+    }else if(parts.length === 2){
+      const [m,sec] = parts;
+      if(sec>=60) return null;
+      return m*60 + sec;
+    }else if(parts.length === 3){
+      const [h,m,sec] = parts;
+      if(m>=60 || sec>=60) return null;
+      return h*3600 + m*60 + sec;
+    }else{
+      return null;
+    }
+  }
+  function formatSec(sec){
+    if(sec < 60) return `${sec}秒`;
+    const two = n => String(n).padStart(2,'0');
+    if(sec < 3600){
+      const m = Math.floor(sec/60), s = sec%60;
+      return `${m}:${two(s)}`;
+    }else{
+      const h = Math.floor(sec/3600);
+      const m = Math.floor((sec%3600)/60);
+      const s = sec%60;
+      return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+  }
+  function showToast(msg='コピーしました！'){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(()=> toast.classList.remove('show'), 1200);
+  }
+  async function copyText(text, btn){
+    try{
+      if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(text);
+      }else{
+        // フォールバック
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta);
+        ta.style.position='fixed'; ta.style.left='-1000px';
+        ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
       }
+      if(btn){ btn.classList.add('copy-once'); setTimeout(()=>btn.classList.remove('copy-once'),600); }
+      showToast();
+    }catch(e){
+      alert('コピーに失敗しました。手動で選択してください。');
     }
+  }
 
-    function formatSeconds(sec) {
-      if (sec < 60) {
-        return String(sec).padStart(2, "0");
-      } else if (sec < 3600) {
-        const m = Math.floor(sec / 60);
-        const s = sec % 60;
-        return `${m}:${String(s).padStart(2,"0")}`;
-      } else {
-        const h = Math.floor(sec / 3600);
-        const m = Math.floor((sec % 3600) / 60);
-        const s = sec % 60;
-        return `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-      }
+  // --- DOM 生成 ---
+  function newRow(member='', times=['','','','','']){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="member-name" type="text" maxlength="4" placeholder="例）A太" value="${escapeHtml(member)}"></td>
+      ${times.map((t,i)=>`<td class="time-cell"><input type="text" inputmode="numeric" pattern="[0-9:]*" placeholder="0" value="${escapeHtml(t)}" data-col="${i}"></td>`).join('')}
+      <td class="op-col">
+        <button class="btn ghost btn-del" title="この行を削除">削除</button>
+      </td>`;
+    return tr;
+  }
+  function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+  function load(){
+    const saved = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+    const targetInputs = document.querySelectorAll('.target-name');
+    if(saved && saved.targets){
+      saved.targets.forEach((v,i)=> targetInputs[i].value = v||'');
     }
-
-    function showToast(msg="コピーしました！") {
-      const t = q("#toast");
-      t.textContent = msg;
-      t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
-      setTimeout(()=>t.classList.remove("show"), 2100);
+    tbody.innerHTML='';
+    const rows = saved && saved.members && saved.members.length ? saved.members : [];
+    if(rows.length){
+      rows.forEach(r => tbody.appendChild(newRow(r.name, r.times)));
+    }else{
+      // 空の3行を用意（必要に応じて増減）
+      tbody.appendChild(newRow());
+      tbody.appendChild(newRow());
+      tbody.appendChild(newRow());
     }
+  }
+  function save(){
+    const targets = [...document.querySelectorAll('.target-name')].map(i => i.value.trim());
+    const members = [...tbody.querySelectorAll('tr')].map(tr => {
+      const name = tr.querySelector('.member-name').value.trim();
+      const times = [...tr.querySelectorAll('.time-cell input')].map(i => z2hColon(i.value.trim()));
+      return {name, times};
+    });
+    localStorage.setItem(LS_KEY, JSON.stringify({targets, members}));
+  }
 
-    // ====== 保存/復元 ======
-    function saveState() {
-      // DOM -> state
-      state.targets = [1,2,3,4,5].map(i => q("#targetName"+i).value);
-      state.rows = qa("#matrix tbody tr").map(tr => {
-        const id = Number(tr.dataset.id);
-        const name = tr.querySelector("td:first-child input")?.value ?? "";
-        const timeInputs = qa("td:nth-child(n+2):nth-last-child(n+2) input", tr);
-        const times = timeInputs.slice(0,5).map(inp => inp.value);
-        return { id, name, times };
-      });
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // --- 事件 ---
+  document.getElementById('addRowBtn').addEventListener('click', () => {
+    tbody.appendChild(newRow());
+    save();
+  });
+  document.getElementById('clearMembersBtn').addEventListener('click', () => {
+    if(!confirm('メンバー行をすべてクリアします。よろしいですか？')) return;
+    tbody.innerHTML='';
+    tbody.appendChild(newRow());
+    save();
+  });
+  document.getElementById('clearAllBtn').addEventListener('click', () => {
+    if(!confirm('対象名・メンバー・時間・保存データをすべて消去します。よろしいですか？')) return;
+    localStorage.removeItem(LS_KEY);
+    load();
+  });
+
+  // 入力の自動保存
+  document.getElementById('targetsBar').addEventListener('input', save, {passive:true});
+  tbody.addEventListener('input', (e)=>{
+    const el = e.target;
+    // 数値キーボードで全角コロンになりがちなので都度半角化
+    if(el.matches('input[type="text"]')){ el.value = z2hColon(el.value); }
+    save();
+  }, {passive:true});
+
+  // 行削除
+  tbody.addEventListener('click', (e)=>{
+    if(e.target.closest('.btn-del')){
+      const tr = e.target.closest('tr');
+      tr?.parentNode?.removeChild(tr);
+      save();
     }
+  });
 
-    function loadState() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return false;
-      try {
-        const s = JSON.parse(raw);
-        if (!s || !Array.isArray(s.targets) || !Array.isArray(s.rows)) return false;
-        // 反映（対象）
-        s.targets.slice(0,5).forEach((v,i)=>{ const el=q("#targetName"+(i+1)); if (el) el.value = v ?? ""; });
-        // 反映（メンバー行）
-        clearList(false);
-        s.rows.forEach(r => addMemberRow(r.name, r.times));
-        return true;
-      } catch { return false; }
-    }
-
-    function wipeAll() {
-      localStorage.removeItem(STORAGE_KEY);
-      // UIも初期化
-      [1,2,3,4,5].forEach(i => q("#targetName"+i).value = "");
-      clearList(false);
-      q("#result").textContent = "";
-      showToast("すべて消去しました");
-    }
-
-    // ====== データモデル ======
-    let nextId = 1;
-
-    function clearList(save=true) {
-      qa("#matrix tbody tr").forEach(tr => tr.remove());
-      nextId = 1;
-      if (save) saveState();
-    }
-
-    function addMemberRow(name, presetTimes) {
-      const tbody = q("#matrix tbody");
-      const id = nextId++;
-
-      const tr = document.createElement("tr");
-      tr.dataset.id = String(id);
-
-      // メンバー名
-      const nameTd = document.createElement("td");
-      const nameInput = document.createElement("input");
-      nameInput.className = "member-name";
-      nameInput.type = "text";
-      nameInput.placeholder = "メンバー名";
-      nameInput.value = name || "";
-      nameInput.addEventListener("input", saveState);
-      nameTd.appendChild(nameInput);
-      tr.appendChild(nameTd);
-
-      // 対象1〜5
-      for (let i=0;i<5;i++){
-        const td = document.createElement("td");
-        const inp = document.createElement("input");
-        inp.className = "time-cell";
-        inp.type = "text";
-        inp.inputMode = "numeric"; // iPhoneで数字キーボード出しやすく
-        inp.placeholder = "秒 or 分:秒";
-        if (presetTimes && typeof presetTimes[i] === "string") inp.value = presetTimes[i];
-        inp.addEventListener("input", saveState);
-        td.appendChild(inp);
-        tr.appendChild(td);
-      }
-
-      // 操作
-      const opTd = document.createElement("td");
-      const delBtn = document.createElement("button");
-      delBtn.className = "btn ghost";
-      delBtn.textContent = "削除";
-      delBtn.addEventListener("click", () => {
-        tr.remove();
-        saveState();
-      });
-      opTd.appendChild(delBtn);
-      tr.appendChild(opTd);
-
-      tbody.appendChild(tr);
-      saveState();
-    }
-
-    function collectForCalc() {
-      const targets = [1,2,3,4,5].map(i => q("#targetName"+i).value.trim());
-      const rows = qa("#matrix tbody tr").map(tr => {
-        const name = tr.querySelector("td:first-child input")?.value.trim() ?? "";
-        const timeInputs = qa("td:nth-child(n+2):nth-last-child(n+2) input", tr);
-        const times = timeInputs.slice(0,5).map(inp => parseTimeToSeconds(inp.value));
-        return { name, times };
-      });
-      return { targets, rows };
-    }
-
-    function buildResults() {
-      const { targets, rows } = collectForCalc();
-      const blocks = [];
-
-      targets.forEach((tName, idx) => {
-        if (!tName) return;
-
-        // 対象 idx に対して有効な時間を持つメンバーを抽出
-        const list = [];
-        rows.forEach(r => {
-          if (!r.name) return;
-          const sec = r.times[idx];
-          if (sec == null) return;
-          list.push({ name: r.name, sec });
-        });
-
-        if (list.length === 0) return;
-
-        // 秒昇順 → 名前順
-        list.sort((a,b)=> a.sec - b.sec || a.name.localeCompare(b.name, "ja"));
-
-        const lines = ["対象：" + tName];
-        list.forEach(item => lines.push(`${formatSeconds(item.sec)} ${item.name}`));
-
-        blocks.push(lines.join("\n"));
-      });
-
-      return blocks.join("\n\n");
-    }
-
-    function renderResults() {
-      const txt = buildResults();
-      q("#result").textContent = txt;
-      return txt;
-    }
-
-    // ====== イベント束ね ======
-    q("#addMemberBtn").addEventListener("click", () => {
-      const name = q("#memberName").value.trim();
-      addMemberRow(name);
-      q("#memberName").value = "";
-      q("#memberName").focus();
+  // --- 計算 ---
+  document.getElementById('calcBtn').addEventListener('click', () => {
+    const targetNames = [...document.querySelectorAll('.target-name')].map(i => i.value.trim());
+    const rows = [...tbody.querySelectorAll('tr')].map(tr => {
+      return {
+        name: tr.querySelector('.member-name').value.trim() || '(無名)',
+        times: [...tr.querySelectorAll('.time-cell input')].map(i => i.value.trim())
+      };
     });
 
-    q("#clearListBtn").addEventListener("click", () => {
-      if (confirm("メンバー表を空にします。よろしいですか？")) clearList();
+    // 対象名が入力された列だけ計算・出力
+    const activeCols = targetNames.map((n,i)=>n ? i : -1).filter(i=>i>=0);
+
+    // 各対象列で最大値（最長移動時間）を算出
+    const resultPerTarget = activeCols.map(col => {
+      const parsed = rows.map(r => ({ name: r.name, sec: parseTimeToSec(r.times[col]) }));
+      const secs = parsed.map(p=>p.sec).filter(v => Number.isInteger(v));
+      const max = secs.length ? Math.max(...secs) : null;
+      if(max===null) return { col, targetName: targetNames[col], delays: [] };
+      const delays = parsed
+        .filter(p => Number.isInteger(p.sec))
+        .map(p => ({ name: p.name, delay: max - p.sec }))
+        .sort((a,b)=> a.delay - b.delay); // 0秒が先頭に見える並び
+      return { col, targetName: targetNames[col], delays };
     });
 
-    q("#wipeAllBtn").addEventListener("click", () => {
-      if (confirm("対象・メンバー・保存データをすべて消去します。よろしいですか？")) wipeAll();
+    // 描画
+    results.innerHTML = '';
+    resultPerTarget.forEach(({targetName, delays, col}) => {
+      const card = document.createElement('div');
+      card.className='card';
+      const title = targetName || `対象${col+1}`;
+      const listItems = delays.map(d => `<li>${escapeHtml(d.name)}：${formatSec(d.delay)}</li>`).join('');
+      card.innerHTML = `
+        <h3>${escapeHtml(title)}（対象${col+1}）</h3>
+        <ul class="list">${listItems || '<li class="small">有効な時間入力がありません</li>'}</ul>
+        <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+          <button class="btn" data-copy-col="${col}">この対象だけコピー</button>
+        </div>
+      `;
+      results.appendChild(card);
     });
 
-    q("#calcBtn").addEventListener("click", renderResults);
+    if(!resultPerTarget.length){
+      results.innerHTML = '<div class="small">対象名が未入力です。対象名を入力すると、その列だけ計算・表示します。</div>';
+    }
+  });
 
-    q("#copyBtn").addEventListener("click", async () => {
-      const txt = renderResults();
-      if (!txt) { showToast("コピー対象の結果がありません"); return; }
-      try {
-        await navigator.clipboard.writeText(txt);
-        showToast("コピーしました！");
-      } catch(e){
-        // フォールバック（iOS含む）
-        const ta = document.createElement("textarea");
-        ta.value = txt;
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.focus(); ta.select();
-        const ok = document.execCommand("copy");
-        document.body.removeChild(ta);
-        showToast(ok ? "コピーしました！" : "コピーできませんでした");
-      }
-    });
+  // 対象ごとのコピー
+  results.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-copy-col]');
+    if(!btn) return;
+    const col = Number(btn.getAttribute('data-copy-col'));
+    const card = btn.closest('.card');
+    const title = card.querySelector('h3')?.textContent?.replace(/\s*\（.*?\）$/,'') || `対象${col+1}`;
+    const lines = [...card.querySelectorAll('li')].map(li => li.textContent).filter(Boolean);
+    const text = [title, ...lines].join('\n');
+    copyText(text, btn);
+  });
 
-    // 対象名の保存
-    [1,2,3,4,5].forEach(i => q("#targetName"+i).addEventListener("input", saveState));
+  // 初期ロード
+  load();
 
-    // 初期復元
-    window.addEventListener("DOMContentLoaded", () => {
-      const restored = loadState();
-      if (!restored) {
-        // 初期は空（必要ならサンプル自動投入も可）
-        // addMemberRow("Aさん"); addMemberRow("Bさん"); addMemberRow("Cさん");
-      }
-    });
-  </script>
+})();
+</script>
 </body>
 </html>
