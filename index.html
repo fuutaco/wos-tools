@@ -5,90 +5,97 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>到着同期タイミング計算ツール</title>
 <style>
-  :root{
-    --fg:#1b1f23; --bg:#fff; --muted:#6a737d; --pri:#0366d6; --ok:#107c10; --warn:#d83b01; --bd:#e1e4e8;
-    --pad:8px; --gap:8px; --radius:8px;
-    --fw-zenkaku-4: 4em; /* 全角4文字相当 */
-    --fw-hankaku-5: 5ch; /* 半角5文字相当 */
-  }
-  html,body{height:100%;}
-  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Meiryo,system-ui,sans-serif;}
-  h1{font-size:18px;margin:16px;}
-  h2{font-size:16px;margin:16px;}
-  .container{padding:0 12px 80px;}
-  .note{color:var(--muted);font-size:12px;margin:4px 0 12px;}
+ :root{
+  --fg:#1b1f23; --bg:#fff; --muted:#6a737d; --pri:#0366d6; --ok:#107c10; --warn:#d83b01; --bd:#e1e4e8;
+  --pad:8px; --gap:8px; --radius:8px;
+  --fw-zenkaku-4: 4em;   /* 全角4文字相当 */
+  --fw-hankaku-5: 5ch;   /* 半角5文字相当 */
+ }
+ html,body{height:100%;}
+ body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Meiryo,system-ui,sans-serif;}
+ h1{font-size:18px;margin:16px;}
+ h2{font-size:16px;margin:16px;}
+ .container{padding:0 12px 80px;}
+ .note{color:var(--muted);font-size:12px;margin:4px 0 12px;}
 
-  /* 対象名 5つを横1行で固定（必要なら横スクロール） */
-  .targets-bar{
-    display:flex; gap:var(--gap); align-items:center; overflow-x:auto; white-space:nowrap; padding:0 12px 8px;
-  }
-  .targets-bar .tcell{display:flex; align-items:center; gap:4px;}
-  .targets-bar label{font-size:12px; color:var(--muted);}
-  input[type="text"], input[type="tel"]{
-    font-size:14px; padding:4px 6px; border:1px solid var(--bd); border-radius:6px; background:#fff; color:var(--fg);
-    box-sizing:content-box; /* content幅＝指定幅 */
-  }
-  .target-name{width:var(--fw-zenkaku-4);}
-  .member-name{width:var(--fw-zenkaku-4);}
-  .time-cell input{width:var(--fw-hankaku-5); text-align:right;}
-  .toolbar{display:flex; gap:8px; padding:8px 12px; flex-wrap:wrap;}
-  .btn{
-    appearance:none; border:1px solid var(--bd); background:#f6f8fa; color:#24292e; padding:6px 10px; border-radius:6px; cursor:pointer;
-  }
-  .btn.primary{background:var(--pri); color:#fff; border-color:transparent;}
-  .btn.ghost{background:transparent;}
-  .btn.danger{border-color:#ffd1cf; background:#fff5f5; color:#a4262c;}
-  .btn:active{transform:translateY(1px);}
-  .copy-once{background:#e8f5e9; border-color:#c8e6c9; color:#107c10;}
+ /* 対象名 5つ（PCは横1行、スマホは改行） */
+ .targets-bar{
+   display:flex; gap:var(--gap); align-items:center; overflow-x:auto; white-space:nowrap; padding:0 12px 8px;
+ }
+ .targets-bar .tcell{display:flex; align-items:center; gap:4px;}
+ .targets-bar label{font-size:12px; color:var(--muted);}
 
-  table{width:100%; border-collapse:separate; border-spacing:0 6px; table-layout:fixed;}
-  colgroup col.c-member{width:calc(var(--fw-zenkaku-4) + 14px);}
-  colgroup col.c-op{width:68px;}
-  colgroup col.c-time{width:calc(var(--fw-hankaku-5) + 14px);}
-  thead th{position:sticky; top:0; background:#fff; z-index:1; font-weight:600; font-size:12px; color:#57606a; padding:2px 4px;}
-  tbody td{padding:0 4px;}
-  tbody tr{background:#fff;}
-  tbody tr td:first-child{padding-left:8px;}
-  tbody tr td:last-child{padding-right:8px;}
-  .op-col{display:flex; gap:6px; justify-content:flex-end; align-items:center;}
-  .small{font-size:12px; color:var(--muted);}
-  .results{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:12px; padding:8px 12px 24px;}
-  .card{border:1px solid var(--bd); border-radius:8px; padding:8px; background:#fff;}
-  .card h3{margin:0 0 6px; font-size:14px;}
-  .list{margin:0; padding-left:16px;}
-  .list li{margin:2px 0;}
-  .toast{position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:#24292e; color:#fff; padding:8px 12px; border-radius:999px; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; font-size:13px;}
-  .toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
-  /* スマホ寄りの詰め */
-  @media (max-width:480px){
-    body{font-size:13px;}
-    .btn{padding:6px 8px;}
-    .results{grid-template-columns:1fr 1fr;}
-  }
-  /* ▼ 追加: モバイルでは対象欄を改行して見切れを解消 */
-  @media (max-width: 600px) {
-    .targets-bar {
-      flex-wrap: wrap;             /* 横スクロールより改行を優先 */
-      overflow-x: visible;         /* スクロールバーを出さない */
-      white-space: normal;         /* nowrap を解除 */
-      row-gap: var(--gap);         /* 行間を確保 */
-      padding-right: 12px;
-    }
-    .targets-bar .tcell {
-      flex: 1 1 33%;               /* 目安: 1行あたり3→次行2の並びになりやすい */
-      min-width: 120px;            /* 狭すぎ防止 */
-      flex-direction: column;      /* ラベル上／入力下 */
-      align-items: flex-start;
-      justify-content: flex-start;
-    }
-    .targets-bar label { margin-bottom: 2px; }
-  }
+ input[type="text"], input[type="tel"]{
+  font-size:14px; padding:4px 6px; border:1px solid var(--bd); border-radius:6px; background:#fff; color:var(--fg);
+  box-sizing:content-box; /* content幅＝指定幅 */
+ }
+
+ .target-name{width:var(--fw-zenkaku-4);}
+ .member-name{width:var(--fw-zenkaku-4);}
+ .time-cell input{width:var(--fw-hankaku-5); text-align:right;}
+
+ .toolbar{display:flex; gap:8px; padding:8px 12px; flex-wrap:wrap;}
+ .btn{
+   appearance:none; border:1px solid var(--bd); background:#f6f8fa; color:#24292e; padding:6px 10px; border-radius:6px; cursor:pointer;
+ }
+ .btn.primary{background:var(--pri); color:#fff; border-color:transparent;}
+ .btn.ghost{background:transparent;}
+ .btn.danger{border-color:#ffd1cf; background:#fff5f5; color:#a4262c;}
+ .btn:active{transform:translateY(1px);}
+ .copy-once{background:#e8f5e9; border-color:#c8e6c9; color:#107c10;}
+
+ table{width:100%; border-collapse:separate; border-spacing:0 6px; table-layout:fixed;}
+ colgroup col.c-member{width:calc(var(--fw-zenkaku-4) + 14px);}
+ colgroup col.c-op{width:68px;}
+ colgroup col.c-time{width:calc(var(--fw-hankaku-5) + 14px);}
+ thead th{position:sticky; top:0; background:#fff; z-index:1; font-weight:600; font-size:12px; color:#57606a; padding:2px 4px;}
+ tbody td{padding:0 4px;}
+ tbody tr{background:#fff;}
+ tbody tr td:first-child{padding-left:8px;}
+ tbody tr td:last-child{padding-right:8px;}
+ .op-col{display:flex; gap:6px; justify-content:flex-end; align-items:center;}
+ .small{font-size:12px; color:var(--muted);}
+
+ .results{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:12px; padding:8px 12px 24px;}
+ .card{border:1px solid var(--bd); border-radius:8px; padding:8px; background:#fff;}
+ .card h3{margin:0 0 6px; font-size:14px;}
+ .list{margin:0; padding-left:16px;}
+ .list li{margin:2px 0;}
+
+ .toast{position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:#24292e; color:#fff; padding:8px 12px; border-radius:999px; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; font-size:13px;}
+ .toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
+
+ /* ▼ モバイルでは対象欄を改行して見切れを解消 */
+ @media (max-width: 600px) {
+   .targets-bar{
+     flex-wrap: wrap;
+     overflow-x: visible;
+     white-space: normal;
+     row-gap: var(--gap);
+     padding-right: 12px;
+   }
+   .targets-bar .tcell{
+     flex: 1 1 33%;
+     min-width: 120px;
+     flex-direction: column; /* ラベル上／入力下 */
+     align-items: flex-start;
+     justify-content: flex-start;
+   }
+   .targets-bar label{ margin-bottom: 2px; }
+ }
+
+ /* スマホ寄りの詰め */
+ @media (max-width:480px){
+  body{font-size:13px;}
+  .btn{padding:6px 8px;}
+  .results{grid-template-columns:1fr 1fr;}
+ }
 </style>
 </head>
 <body>
   <h1>到着同期タイミング計算ツール</h1>
 
-  <!-- 対象名 5つ（横並び固定） -->
+  <!-- 対象名 5つ -->
   <div class="targets-bar" id="targetsBar" aria-label="対象名">
     <div class="tcell"><label>対象1</label><input class="target-name" data-col="0" type="text" maxlength="4" placeholder="例）本丸"></div>
     <div class="tcell"><label>対象2</label><input class="target-name" data-col="1" type="text" maxlength="4" placeholder="A門"></div>
@@ -99,7 +106,7 @@
 
   <div class="note" style="padding:0 12px;">
     時間は <b>秒</b> または <b>分:秒</b>（例：<code>97</code> / <code>1:37</code>）あるいは <b>時:分:秒</b>（例：<code>1:02:03</code>）で入力できます。<br>
-    出力は <b><60秒</b> は数字のみ（単位なし）、<b>60秒〜</b> は「分:秒」、<b>3600秒〜</b> は「時:分:秒」で表示します。入力はこの端末のブラウザに<b>自動保存</b>されます。
+    出力は <b>&lt;60秒</b> は <b>数字のみ（単位なし）</b>、<b>60秒〜</b> は「分:秒」、<b>3600秒〜</b> は「時:分:秒」で表示します。入力はこの端末のブラウザに<b>自動保存</b>されます。
   </div>
 
   <div class="toolbar">
@@ -119,11 +126,11 @@
       <thead>
         <tr>
           <th>メンバー名</th>
-          <th>対象1</th>
-          <th>対象2</th>
-          <th>対象3</th>
-          <th>対象4</th>
-          <th>対象5</th>
+          <th data-col="0">対象1</th>
+          <th data-col="1">対象2</th>
+          <th data-col="2">対象3</th>
+          <th data-col="3">対象4</th>
+          <th data-col="4">対象5</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -151,7 +158,7 @@
   const toast = document.getElementById('toast');
 
   // --- ユーティリティ ---
-  const z2hColon = s => (s || '').replace(/：/g, ':').trim();
+  const z2hColon = s => (s ?? '').replace(/\uFF1A/g, ':').trim();
   function parseTimeToSec(raw){
     if(!raw) return null;
     let s = z2hColon(raw).replace(/[秒sＳ]$/i,'').trim();
@@ -174,19 +181,18 @@
     }
   }
   function formatSec(sec){
-   if(sec < 60) return String(sec); // 秒の単位を付けない
-   const two = n => String(n).padStart(2,'0');
-   if(sec < 3600){
-     const m = Math.floor(sec/60), s = sec%60;
-     return `${m}:${two(s)}`;
-   }else{
-     const h = Math.floor(sec/3600);
-     const m = Math.floor((sec%3600)/60);
-     const s = sec%60;
-     return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-   }
- }
-
+    if(sec < 60) return String(sec); // 秒の単位を付けない
+    const two = n => String(n).padStart(2,'0');
+    if(sec < 3600){
+      const m = Math.floor(sec/60), s = sec%60;
+      return `${m}:${two(s)}`;
+    }else{
+      const h = Math.floor(sec/3600);
+      const m = Math.floor((sec%3600)/60);
+      const s = sec%60;
+      return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+  }
   function showToast(msg='コピーしました！'){
     toast.textContent = msg;
     toast.classList.add('show');
@@ -209,6 +215,7 @@
       alert('コピーに失敗しました。手動で選択してください。');
     }
   }
+  function escapeHtml(s){ return String(s??'').replace(/[&<>\"']/g, m=>({'&':'&','<':'<','>':'>','"':'"','\'':'&#39;'}[m])); }
 
   // --- DOM 生成 ---
   function newRow(member='', times=['','','','','']){
@@ -221,13 +228,22 @@
       </td>`;
     return tr;
   }
-  function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
+  // --- 保存/読込 ---
+  function save(){
+    const targets = [...document.querySelectorAll('.target-name')].map(i => i.value.trim());
+    const members = [...tbody.querySelectorAll('tr')].map(tr => {
+      const name = tr.querySelector('.member-name').value.trim();
+      const times = [...tr.querySelectorAll('.time-cell input')].map(i => z2hColon(i.value.trim()));
+      return {name, times};
+    });
+    localStorage.setItem(LS_KEY, JSON.stringify({targets, members}));
+  }
   function load(){
-    const saved = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+    const saved = JSON.parse(localStorage.getItem(LS_KEY) ?? 'null');
     const targetInputs = document.querySelectorAll('.target-name');
     if(saved && saved.targets){
-      saved.targets.forEach((v,i)=> targetInputs[i].value = v||'');
+      saved.targets.forEach((v,i)=> targetInputs[i].value = v ?? '');
     }
     tbody.innerHTML='';
     const rows = saved && saved.members && saved.members.length ? saved.members : [];
@@ -239,26 +255,47 @@
       tbody.appendChild(newRow());
       tbody.appendChild(newRow());
     }
-  }
-  function save(){
-    const targets = [...document.querySelectorAll('.target-name')].map(i => i.value.trim());
-    const members = [...tbody.querySelectorAll('tr')].map(tr => {
-      const name = tr.querySelector('.member-name').value.trim();
-      const times = [...tr.querySelectorAll('.time-cell input')].map(i => z2hColon(i.value.trim()));
-      return {name, times};
-    });
-    localStorage.setItem(LS_KEY, JSON.stringify({targets, members}));
+    updateHeaderLabelsFromTargets();
+    applyTimeInputsAria();
   }
 
-  // --- 事件 ---
+  // --- ラベル同期（対象名 → メンバー欄ヘッダ） ---
+  function getTargetNames(){
+    return [...document.querySelectorAll('.target-name')].map(i => i.value.trim());
+  }
+  function updateHeaderLabelsFromTargets(){
+    const names = getTargetNames();
+    const ths = document.querySelectorAll('#grid thead th[data-col]');
+    ths.forEach(th => {
+      const i = Number(th.getAttribute('data-col'));
+      th.textContent = names[i] || `対象${i+1}`;
+    });
+  }
+  function applyTimeInputsAria(){
+    // ヘッダテキストを各時間入力の aria-label に反映
+    const headerTexts = [...document.querySelectorAll('#grid thead th[data-col]')].map(th => th.textContent.trim());
+    [...tbody.querySelectorAll('tr')].forEach(tr => {
+      const memberName = tr.querySelector('.member-name')?.value?.trim() || '';
+      [...tr.querySelectorAll('.time-cell input')].forEach(input => {
+        const col = Number(input.getAttribute('data-col'));
+        const tgt = headerTexts[col] || `対象${col+1}`;
+        const label = memberName ? `${tgt}（${memberName}）の時間` : `${tgt}の時間`;
+        input.setAttribute('aria-label', label);
+      });
+    });
+  }
+
+  // --- 事象 ---
   document.getElementById('addRowBtn').addEventListener('click', () => {
     tbody.appendChild(newRow());
+    applyTimeInputsAria();
     save();
   });
   document.getElementById('clearMembersBtn').addEventListener('click', () => {
     if(!confirm('メンバー行をすべてクリアします。よろしいですか？')) return;
     tbody.innerHTML='';
     tbody.appendChild(newRow());
+    applyTimeInputsAria();
     save();
   });
   document.getElementById('clearAllBtn').addEventListener('click', () => {
@@ -267,12 +304,23 @@
     load();
   });
 
-  // 入力の自動保存
-  document.getElementById('targetsBar').addEventListener('input', save, {passive:true});
+  // 入力の自動保存（対象欄）
+  document.getElementById('targetsBar').addEventListener('input', e => {
+    // 全角コロン防止（任意のキー入力時に補正）
+    const el = e.target;
+    if(el.matches('input[type="text"]')){ el.value = z2hColon(el.value); }
+    updateHeaderLabelsFromTargets();
+    applyTimeInputsAria();
+    save();
+  }, {passive:true});
+
+  // 入力の自動保存（メンバー表）
   tbody.addEventListener('input', (e)=>{
     const el = e.target;
     // 数値キーボードで全角コロンになりがちなので都度半角化
     if(el.matches('input[type="text"]')){ el.value = z2hColon(el.value); }
+    // メンバー名変更時は aria 更新
+    if(el.classList.contains('member-name')){ applyTimeInputsAria(); }
     save();
   }, {passive:true});
 
@@ -287,14 +335,13 @@
 
   // --- 計算 ---
   document.getElementById('calcBtn').addEventListener('click', () => {
-    const targetNames = [...document.querySelectorAll('.target-name')].map(i => i.value.trim());
+    const targetNames = getTargetNames();
     const rows = [...tbody.querySelectorAll('tr')].map(tr => {
       return {
         name: tr.querySelector('.member-name').value.trim() || '(無名)',
         times: [...tr.querySelectorAll('.time-cell input')].map(i => i.value.trim())
       };
     });
-
     // 対象名が入力された列だけ計算・出力
     const activeCols = targetNames.map((n,i)=>n ? i : -1).filter(i=>i>=0);
 
@@ -316,10 +363,11 @@
     resultPerTarget.forEach(({targetName, delays, col}) => {
       const card = document.createElement('div');
       card.className='card';
+      // タイトルは対象名のみ（(対象1)などの表記は一切付けない）
       const title = targetName || `対象${col+1}`;
       const listItems = delays.map(d => `<li>${escapeHtml(d.name)}：${formatSec(d.delay)}</li>`).join('');
       card.innerHTML = `
-        <h3>${escapeHtml(title)}（対象${col+1}）</h3>
+        <h3>${escapeHtml(title)}</h3>
         <ul class="list">${listItems || '<li class="small">有効な時間入力がありません</li>'}</ul>
         <div style="display:flex;justify-content:flex-end;margin-top:6px;">
           <button class="btn" data-copy-col="${col}">この対象だけコピー</button>
@@ -327,7 +375,6 @@
       `;
       results.appendChild(card);
     });
-
     if(!resultPerTarget.length){
       results.innerHTML = '<div class="small">対象名が未入力です。対象名を入力すると、その列だけ計算・表示します。</div>';
     }
@@ -339,15 +386,14 @@
     if(!btn) return;
     const col = Number(btn.getAttribute('data-copy-col'));
     const card = btn.closest('.card');
-    const title = card.querySelector('h3')?.textContent?.replace(/\s*\（.*?\）$/,'') || `対象${col+1}`;
-    const lines = [...card.querySelectorAll('li')].map(li => li.textContent).filter(Boolean);
+    const title = card.querySelector('h3')?.textContent?.trim() || `対象${col+1}`;
+    const lines = [...card.querySelectorAll('li:not(.small)')].map(li => li.textContent).filter(Boolean);
     const text = [title, ...lines].join('\n');
     copyText(text, btn);
   });
 
   // 初期ロード
   load();
-
 })();
 </script>
 </body>
