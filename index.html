@@ -65,6 +65,24 @@
     .btn{padding:6px 8px;}
     .results{grid-template-columns:1fr 1fr;}
   }
+  /* ▼ 追加: モバイルでは対象欄を改行して見切れを解消 */
+  @media (max-width: 600px) {
+    .targets-bar {
+      flex-wrap: wrap;             /* 横スクロールより改行を優先 */
+      overflow-x: visible;         /* スクロールバーを出さない */
+      white-space: normal;         /* nowrap を解除 */
+      row-gap: var(--gap);         /* 行間を確保 */
+      padding-right: 12px;
+    }
+    .targets-bar .tcell {
+      flex: 1 1 33%;               /* 目安: 1行あたり3→次行2の並びになりやすい */
+      min-width: 120px;            /* 狭すぎ防止 */
+      flex-direction: column;      /* ラベル上／入力下 */
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+    .targets-bar label { margin-bottom: 2px; }
+  }
 </style>
 </head>
 <body>
@@ -81,7 +99,7 @@
 
   <div class="note" style="padding:0 12px;">
     時間は <b>秒</b> または <b>分:秒</b>（例：<code>97</code> / <code>1:37</code>）あるいは <b>時:分:秒</b>（例：<code>1:02:03</code>）で入力できます。<br>
-    出力は <b>&lt;60秒</b> は「秒」、<b>60秒〜</b> は「分:秒」、<b>3600秒〜</b> は「時:分:秒」で表示します。入力はこの端末のブラウザに<b>自動保存</b>されます。
+    出力は <b><60秒</b> は数字のみ（単位なし）、<b>60秒〜</b> は「分:秒」、<b>3600秒〜</b> は「時:分:秒」で表示します。入力はこの端末のブラウザに<b>自動保存</b>されます。
   </div>
 
   <div class="toolbar">
@@ -156,18 +174,19 @@
     }
   }
   function formatSec(sec){
-    if(sec < 60) return `${sec}秒`;
-    const two = n => String(n).padStart(2,'0');
-    if(sec < 3600){
-      const m = Math.floor(sec/60), s = sec%60;
-      return `${m}:${two(s)}`;
-    }else{
-      const h = Math.floor(sec/3600);
-      const m = Math.floor((sec%3600)/60);
-      const s = sec%60;
-      return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    }
-  }
+   if(sec < 60) return String(sec); // 秒の単位を付けない
+   const two = n => String(n).padStart(2,'0');
+   if(sec < 3600){
+     const m = Math.floor(sec/60), s = sec%60;
+     return `${m}:${two(s)}`;
+   }else{
+     const h = Math.floor(sec/3600);
+     const m = Math.floor((sec%3600)/60);
+     const s = sec%60;
+     return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+   }
+ }
+
   function showToast(msg='コピーしました！'){
     toast.textContent = msg;
     toast.classList.add('show');
